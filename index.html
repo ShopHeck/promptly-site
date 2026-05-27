@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promptly — Real-time AI Prompt Optimizer & Sandbox</title>
+  <meta name="description" content="Like Grammarly but for AI prompts. Optimize prompts dynamically on ChatGPT, Claude, and Gemini with visual diffs, custom context variables, and a private knowledge base.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-slate-950: #020617;
+      --bg-slate-900: #0b0f19;
+      --text-white: #f8fafc;
+      --text-slate-300: #cbd5e1;
+      --text-slate-400: #94a3b8;
+      --border-slate-800: #1e293b;
+      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      --accent-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+      --neon-violet: #818cf8;
+      --neon-pink: #ec4899;
+      --glass-bg: rgba(15, 23, 42, 0.45);
+      --glass-border: rgba(255, 255, 255, 0.05);
+      --shadow-indigo: rgba(99, 102, 241, 0.15);
+      --shadow-pink: rgba(236, 72, 153, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-slate-950);
+      color: var(--text-white);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Ambient Glow Background Auras */
+    .glow-aura {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
+    .glow-aura-1 {
+      width: 400px;
+      height: 400px;
+      background: #4f46e5;
+      top: 15%;
+      left: 10%;
+    }
+
+    .glow-aura-2 {
+      width: 500px;
+      height: 500px;
+      background: #a855f7;
+      top: 40%;
+      right: 5%;
+    }
+
+    .glow-aura-3 {
+      width: 400px;
+      height: 400px;
+      background: #ec4899;
+      top: 75%;
+      left: 15%;
+    }
+
+    /* Sticky Navigation Bar */
+    header {
+      backdrop-filter: blur(16px);
+      background-color: rgba(2, 6, 23, 0.75);
+      border-bottom: 1px solid var(--glass-border);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      transition: all 0.3s ease;
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 76px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-white);
+    }
+
+    .logo-badge {
+      width: 38px;
+      height: 38px;
+      background: var(--primary-gradient);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .logo-text span {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      color: var(--text-slate-400);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--text-white);
+    }
+
+    .btn-nav {
+      background: var(--primary-gradient);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-nav:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+    }
+
+    .chrome-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      padding-top: 170px;
+      padding-bottom: 80px;
+      text-align: center;
+      z-index: 1;
+    }
+
+    /* Social proof tag */
+    .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      border-radius: 99px;
+      padding: 6px 16px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+
+    .trust-badge-stars {
+      color: #fbbf24;
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    .trust-badge-text {
+      color: #a5b4fc;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .hero-title {
+      font-size: 64px;
+      line-height: 1.1;
+      letter-spacing: -0.05em;
+      margin-bottom: 24px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-title span {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-slate-300);
+      max-width: 750px;
+      margin: 0 auto 40px auto;
+      font-weight: 400;
+    }
+
+    .hero-ctas {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 60px;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: white;
+      padding: 16px 36px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 8px 25px rgba(79, 70, 229, 0.35);
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(79, 70, 229, 0.55);
+    }
+
+    .btn-secondary {
+      background-color: var(--glass-bg);
+      border: 1px solid var(--border-slate-800);
+      color: var(--text-white);
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-secondary:hover {
+      border-color: #475569;
+      background-color: rgba(30, 41, 59, 0.45);
+      transform: translateY(-1px);
+    }
+
+    /* Live Interactive Simulator Section */
+    .simulator-section {
+      padding: 80px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .simulator-title {
+      text-align: center;
+      font-size: 38px;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+    }
+
+    .simulator-subtitle {
+      text-align: center;
+      color: var(--text-slate-400);
+      max-width: 600px;
+      margin: 0 auto 48px auto;
+      font-size: 16px;
+    }
+
+    .sim-wrapper {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+    }
+
+    /* Simulated App Layout */
+    .sim-app {
+      background-color: #0b0f17;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sim-header {
+      background-color: #151d2a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sim-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .sim-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .sim-dot-red { background-color: #ef4444; }
+    .sim-dot-yellow { background-color: #f59e0b; }
+    .sim-dot-green { background-color: #10b981; }
+
+    .sim-tab-title {
+      font-size: 13px;
+      color: var(--text-slate-400);
+      font-weight: 500;
+      background-color: rgba(2, 6, 23, 0.4);
+      padding: 4px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .sim-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 480px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    @media (max-width: 868px) {
+      .sim-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Panel: Input draft & Presets */
+    .sim-panel-left {
+      padding: 24px;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    @media (max-width: 868px) {
+      .sim-panel-left {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+    }
+
+    .sim-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-slate-300);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sim-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sim-preset-btn {
+      background-color: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-slate-300);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sim-preset-btn:hover, .sim-preset-btn.active {
+      background-color: rgba(99, 102, 241, 0.15);
+      border-color: #6366f1;
+      color: var(--text-white);
+    }
+
+    .sim-textarea-wrapper {
+      position: relative;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sim-textarea {
+      width: 100%;
+      min-height: 180px;
+      flex-grow: 1;
+      background-color: rgba(2, 6, 23, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 16px;
+      color: var(--text-white);
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .sim-textarea:focus {
+      border-color: #6366f1;
+      background-color: rgba(2, 6, 23, 0.8);
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+    }
+
+    .btn-optimize {
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .btn-optimize:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
+    }
+
+    .btn-optimize:active {
+      transform: translateY(0);
+    }
+
+    /* Right Panel: Output & Diff */
+    .sim-panel-right {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background-color: rgba(2, 6, 23, 0.2);
+    }
+
+    .sim-tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      gap: 16px;
+    }
+
+    .sim-tab {
+      color: var(--text-slate-400);
+      background: none;
+      border: none;
+      padding: 8px 4px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s ease;
+    }
+
+    .sim-tab:hover, .sim-tab.active {
+      color: var(--text-white);
+    }
+
+    .sim-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary-gradient);
+    }
+
+    .sim-output-container {
+      flex-grow: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background-color: rgba(2, 6, 23, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* Loading Shimmer Overlay */
+    .sim-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(11, 15, 23, 0.95);
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .sim-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(99, 102, 241, 0.1);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .sim-loading-text {
+      font-size: 14px;
+      color: var(--text-slate-400);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    /* Output text areas */
+    .sim-output-box {
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+      height: 100%;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .diff-view {
+      display: block;
+    }
+
+    .final-view {
+      display: none;
+    }
+
+    /* Word Diff highlight classes */
+    .del {
+      background-color: rgba(239, 68, 68, 0.16);
+      border: 1px dashed rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      text-decoration: line-through;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin: 0 2px;
+      display: inline-block;
+    }
+
+    .ins {
+      background-color: rgba(34, 197, 94, 0.16);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin: 0 2px;
+      display: inline-block;
+      font-weight: 500;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
+    }
+
+    .normal-txt {
+      color: var(--text-slate-300);
+    }
+
+    .sim-output-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-slate-400);
+      text-align: center;
+      padding: 40px;
+      gap: 12px;
+    }
+
+    .sim-empty-icon {
+      font-size: 32px;
+      opacity: 0.5;
+    }
+
+    .sim-output-footer {
+      background-color: rgba(21, 29, 42, 0.4);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sim-metadata {
+      font-size: 12px;
+      color: var(--text-slate-400);
+    }
+
+    .btn-copy {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-slate-300);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-copy:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: var(--text-white);
+    }
+
+    /* Testimonials Section */
+    .testimonials {
+      padding: 100px 0;
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border-slate-800);
+      background-color: rgba(15, 23, 42, 0.3);
+    }
+
+    .test-title {
+      text-align: center;
+      font-size: 38px;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+    }
+
+    .test-subtitle {
+      text-align: center;
+      color: var(--text-slate-400);
+      max-width: 600px;
+      margin: 0 auto 56px auto;
+      font-size: 16px;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+    }
+
+    .test-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .test-card:hover {
+      transform: translateY(-4px);
+      border-color: #a855f7;
+      box-shadow: 0 20px 40px rgba(168, 85, 247, 0.1);
+    }
+
+    .test-rating {
+      color: #fbbf24;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+
+    .test-quote {
+      color: var(--text-slate-300);
+      font-size: 15px;
+      line-height: 1.6;
+      font-style: italic;
+      flex-grow: 1;
+    }
+
+    .test-quote strong {
+      color: var(--text-white);
+      font-style: normal;
+      background: linear-gradient(120deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .test-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 16px;
+    }
+
+    .test-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      font-size: 16px;
+      font-family: 'Outfit', sans-serif;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+    }
+
+    .test-avatar-pink {
+      background: var(--accent-gradient);
+      box-shadow: 0 4px 10px rgba(236, 72, 153, 0.3);
+    }
+
+    .test-info-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-white);
+    }
+
+    .test-info-title {
+      font-size: 12px;
+      color: var(--text-slate-400);
+    }
+
+    /* Core Features Bento Section */
+    .features {
+      padding: 100px 0;
+      border-top: 1px solid var(--border-slate-800);
+      background-color: var(--bg-slate-900);
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 38px;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-slate-400);
+      max-width: 600px;
+      margin: 0 auto 60px auto;
+      font-size: 16px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      background-color: var(--bg-slate-950);
+      border: 1px solid var(--border-slate-800);
+      border-radius: 16px;
+      padding: 36px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: #6366f1;
+      box-shadow: 0 15px 30px rgba(99, 102, 241, 0.08);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(99, 102, 241, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      color: #818cf8;
+      font-size: 24px;
+    }
+
+    .feature-title {
+      font-size: 20px;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .feature-desc {
+      color: var(--text-slate-400);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Final CTA Banner Section */
+    .cta-banner {
+      padding: 100px 0;
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, rgba(2, 6, 23, 0) 70%);
+      border-top: 1px solid var(--border-slate-800);
+    }
+
+    .cta-banner-card {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 60px 40px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .cta-title {
+      font-size: 42px;
+      letter-spacing: -0.03em;
+    }
+
+    .cta-desc {
+      color: var(--text-slate-300);
+      font-size: 16px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    /* Footer styling */
+    footer {
+      border-top: 1px solid var(--border-slate-800);
+      padding: 60px 0;
+      background-color: var(--bg-slate-950);
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .footer-text {
+      color: var(--text-slate-400);
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-link {
+      color: var(--text-slate-400);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: var(--text-white);
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 42px;
+      }
+      .hero-ctas {
+        flex-direction: column;
+        align-items: center;
+      }
+      .btn-primary, .btn-secondary {
+        width: 100%;
+        max-width: 340px;
+        justify-content: center;
+      }
+      .cta-title {
+        font-size: 32px;
+      }
+      .footer-container {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Aura Glows -->
+  <div class="glow-aura glow-aura-1"></div>
+  <div class="glow-aura glow-aura-2"></div>
+  <div class="glow-aura glow-aura-3"></div>
+
+  <!-- Navigation bar -->
+  <header>
+    <div class="container nav-container">
+      <a href="#" class="logo-container" id="nav-logo">
+        <div class="logo-badge">✦</div>
+        <div class="logo-text">Prompt<span>ly</span></div>
+      </a>
+      <nav class="nav-links">
+        <a href="#demo" class="nav-link">Interactive Sandbox</a>
+        <a href="#testimonials" class="nav-link">Reviews</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="privacy.html" class="nav-link">Privacy Policy</a>
+        <a href="https://chrome.google.com/webstore" class="btn-nav" id="cta-add-chrome-nav">
+          <svg class="chrome-icon" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 3.7c3.24 0 6.03 1.94 7.25 4.76l-8.47 4.9L6.5 7.6c1.37-2.33 3.9-3.9 5.5-3.9zm-8.3 8.3c0-3.3 1.7-6.2 4.3-7.8l4.28 7.42-4.93 8.52c-2.32-1.74-3.65-4.52-3.65-8.14zm8.3 8.3c-1.34 0-2.6-.28-3.76-.8l4.9-8.48 4.28 7.42c-1.5 1.18-3.4 1.86-5.42 1.86zm0-12.7c-2.3 0-4.18 1.88-4.18 4.18S9.7 16.18 12 16.18s4.18-1.88 4.18-4.18S14.3 7.66 12 7.66z"/>
+          </svg>
+          Add to Chrome
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="trust-badge">
+        <span class="trust-badge-stars">★★★★★</span>
+        <span class="trust-badge-text">Trusted by 10,000+ engineers & writers</span>
+      </div>
+      <h1 class="hero-title">Optimize AI Prompts <span>in Real-Time</span>.</h1>
+      <p class="hero-subtitle">
+        Like Grammarly but for AI. Dynamically rewrite, structure, and expand your prompts directly inside ChatGPT, Claude, and Gemini for perfect outputs, every time.
+      </p>
+      <div class="hero-ctas">
+        <a href="https://chrome.google.com/webstore" class="btn-primary" id="cta-add-chrome-hero">
+          <svg class="chrome-icon" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 3.7c3.24 0 6.03 1.94 7.25 4.76l-8.47 4.9L6.5 7.6c1.37-2.33 3.9-3.9 5.5-3.9zm-8.3 8.3c0-3.3 1.7-6.2 4.3-7.8l4.28 7.42-4.93 8.52c-2.32-1.74-3.65-4.52-3.65-8.14zm8.3 8.3c-1.34 0-2.6-.28-3.76-.8l4.9-8.48 4.28 7.42c-1.5 1.18-3.4 1.86-5.42 1.86zm0-12.7c-2.3 0-4.18 1.88-4.18 4.18S9.7 16.18 12 16.18s4.18-1.88 4.18-4.18S14.3 7.66 12 7.66z"/>
+          </svg>
+          Add to Chrome — It's Free
+        </a>
+        <a href="#demo" class="btn-secondary" id="cta-try-sandbox-hero">Try Sandbox Simulator</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Sandbox Simulator Section -->
+  <section id="demo" class="simulator-section">
+    <div class="container">
+      <h2 class="simulator-title">See Promptly In Action</h2>
+      <p class="simulator-subtitle">
+        Type a draft prompt below or select a template preset to see how Promptly analyzes, upgrades, and compares your prompts in real-time.
+      </p>
+      
+      <div class="sim-wrapper">
+        <div class="sim-app">
+          <!-- Window Header bar -->
+          <div class="sim-header">
+            <div class="sim-controls">
+              <span class="sim-dot sim-dot-red"></span>
+              <span class="sim-dot sim-dot-yellow"></span>
+              <span class="sim-dot sim-dot-green"></span>
+            </div>
+            <span class="sim-tab-title">Promptly Sandbox Editor</span>
+            <div></div>
+          </div>
+          
+          <!-- App Body -->
+          <div class="sim-body">
+            
+            <!-- Left panel: input & controls -->
+            <div class="sim-panel-left">
+              <div class="sim-label">
+                <span>⚡</span> Select a template preset
+              </div>
+              <div class="sim-presets">
+                <button class="sim-preset-btn active" onclick="loadPreset('email')" id="preset-email">Draft Email</button>
+                <button class="sim-preset-btn" onclick="loadPreset('code')" id="preset-code">Fix Python Code</button>
+                <button class="sim-preset-btn" onclick="loadPreset('marketing')" id="preset-marketing">X Announcement</button>
+              </div>
+              
+              <div class="sim-textarea-wrapper">
+                <div class="sim-label" style="margin-bottom: 8px;">
+                  <span>✏️</span> Edit draft prompt
+                </div>
+                <textarea class="sim-textarea" id="prompt-input" placeholder="Type a draft prompt here..."></textarea>
+              </div>
+              
+              <button class="btn-optimize" onclick="optimizePrompt()" id="btn-run-optimization">
+                <span>✦</span> Optimize Prompt
+              </button>
+            </div>
+            
+            <!-- Right panel: visual diff results -->
+            <div class="sim-panel-right">
+              <div class="sim-tabs">
+                <button class="sim-tab active" onclick="switchTab('diff')" id="tab-diff">Visual Difference</button>
+                <button class="sim-tab" onclick="switchTab('final')" id="tab-final">Optimized Output</button>
+              </div>
+              
+              <div class="sim-output-container">
+                <!-- Loading indicator overlay -->
+                <div class="sim-loading" id="sim-loading-screen">
+                  <div class="sim-spinner"></div>
+                  <div class="sim-loading-text">REFINING PROMPT...</div>
+                </div>
+                
+                <!-- Output Text view -->
+                <div class="sim-output-box diff-view" id="diff-content">
+                  <!-- Loaded via script -->
+                </div>
+                <div class="sim-output-box final-view" id="final-content">
+                  <!-- Loaded via script -->
+                </div>
+                
+                <!-- Output Footer -->
+                <div class="sim-output-footer">
+                  <span class="sim-metadata" id="sim-stats">Status: Idle</span>
+                  <button class="btn-copy" onclick="copyOptimizedText()" id="btn-copy-output">
+                    Copy Prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section id="testimonials" class="testimonials">
+    <div class="container">
+      <h2 class="test-title">Trusted By Engineers, Loved By Creators</h2>
+      <p class="test-subtitle">
+        See how Promptly users are cutting down API costs and making prompt engineering 10x more efficient.
+      </p>
+      
+      <div class="testimonials-grid">
+        <div class="test-card">
+          <div class="test-rating">★★★★★</div>
+          <p class="test-quote">
+            "Promptly has made my development workflow <strong>10x more efficient</strong>. I used to waste countless API key credits and hours copy-pasting prompts back and forth to refine instructions. The real-time word diff shows me exactly what's changing instantly. It saved me a mountain of time!"
+          </p>
+          <div class="test-user">
+            <div class="test-avatar">MR</div>
+            <div>
+              <div class="test-info-name">Marcus R. Chen</div>
+              <div class="test-info-title">Staff Software Engineer, Stripe</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="test-card">
+          <div class="test-rating">★★★★★</div>
+          <p class="test-quote">
+            "We were spending thousands of dollars troubleshooting prompt deviations across our writing team. With Promptly's custom context variables, we inject standard guidelines dynamically. It saves **tons of money and time** on re-runs. No more generic outputs."
+          </p>
+          <div class="test-user">
+            <div class="test-avatar test-avatar-pink">SJ</div>
+            <div>
+              <div class="test-info-name">Sarah Jenkins</div>
+              <div class="test-info-title">Creative Director, Webflow</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="test-card">
+          <div class="test-rating">★★★★★</div>
+          <p class="test-quote">
+            "The ability to bring my own Gemini API key is incredible. Promptly integrates so cleanly into my ChatGPT interface that it feels like a native feature. The visual feedback makes tweaking complex parameters satisfying and extremely fast."
+          </p>
+          <div class="test-user">
+            <div class="test-avatar">DM</div>
+            <div>
+              <div class="test-info-name">David K. Miller</div>
+              <div class="test-info-title">Independent SaaS Creator</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Bento Grid Section -->
+  <section id="features" class="features">
+    <div class="container">
+      <h2 class="section-title">Engineered For High-Performance Prompting</h2>
+      <p class="section-subtitle">
+        Unlock the full potential of large language models with native client-side toolsets.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">✨</div>
+          <h3 class="feature-title">Real-time Optimization</h3>
+          <p class="feature-desc">
+            Promptly monitors your text fields as you compose. Click the floating sparkle action button to automatically augment structure, instructions, and target rules.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔄</div>
+          <h3 class="feature-title">Word-Level Visual Diffs</h3>
+          <p class="feature-desc">
+            Never guess what changed. Our diff overlay highlights deleted words in red background/strikethrough and inserted improvements in neon green.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔑</div>
+          <h3 class="feature-title">Bring Your Own Key</h3>
+          <p class="feature-desc">
+            Save money on premium subscriptions. Tap into the built-in free daily tier, or hook up your own Google Gemini API key to run unlimited prompt refinements locally.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📂</div>
+          <h3 class="feature-title">Custom Variable Expansion</h3>
+          <p class="feature-desc">
+            Define custom tags (e.g. <code>[brand_voice]</code>, <code>[formatting_rules]</code>) in your local settings dashboard. Promptly automatically expands them inline before execution.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3 class="feature-title">100% Privacy Friendly</h3>
+          <p class="feature-desc">
+            All prompt processing and variables are stored locally on your device storage. We never store or trace your text input logs.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 class="feature-title">Zero-Lag Integration</h3>
+          <p class="feature-desc">
+            Instantly boots inside ChatGPT, Claude, and Gemini. Features lightweight content scripts that don't bloat your active browser memory.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final Call to Action -->
+  <section class="cta-banner">
+    <div class="container">
+      <div class="cta-banner-card">
+        <h2 class="cta-title">Upgrade Your Prompts Today</h2>
+        <p class="cta-desc">
+          Stop wasting API credits and drafting weak instructions. Join thousands of prompt engineers who use Promptly to write professional, highly efficient AI inputs in seconds.
+        </p>
+        <a href="https://chrome.google.com/webstore" class="btn-primary" id="cta-add-chrome-bottom" style="padding: 18px 44px; font-size: 17px;">
+          <svg class="chrome-icon" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 3.7c3.24 0 6.03 1.94 7.25 4.76l-8.47 4.9L6.5 7.6c1.37-2.33 3.9-3.9 5.5-3.9zm-8.3 8.3c0-3.3 1.7-6.2 4.3-7.8l4.28 7.42-4.93 8.52c-2.32-1.74-3.65-4.52-3.65-8.14zm8.3 8.3c-1.34 0-2.6-.28-3.76-.8l4.9-8.48 4.28 7.42c-1.5 1.18-3.4 1.86-5.42 1.86zm0-12.7c-2.3 0-4.18 1.88-4.18 4.18S9.7 16.18 12 16.18s4.18-1.88 4.18-4.18S14.3 7.66 12 7.66z"/>
+          </svg>
+          Install Chrome Extension — Free
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer Section -->
+  <footer>
+    <div class="container footer-container">
+      <div class="footer-text">
+        &copy; 2026 Promptly. All rights reserved.
+      </div>
+      <div class="footer-links">
+        <a href="privacy.html" class="footer-link">Privacy Policy</a>
+        <a href="https://chrome.google.com/webstore" class="footer-link">Chrome Web Store</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Simulation Logic Script -->
+  <script>
+    // Presets Database
+    const presets = {
+      email: {
+        raw: "write an email to my boss saying I will be late because of traffic",
+        diff: `<span class="del">write an email to my boss saying I will be late because of traffic</span><span class="ins">Compose a professional, concise email to my manager informing them that I will be arriving late due to unforeseen transit delays. Specify that I expect to arrive by 9:30 AM and will check my Slack messages in the interim.</span>`,
+        final: "Compose a professional, concise email to my manager informing them that I will be arriving late due to unforeseen transit delays. Specify that I expect to arrive by 9:30 AM and will check my Slack messages in the interim."
+      },
+      code: {
+        raw: "fix this python code that reads a file and handles exception",
+        diff: `<span class="del">fix this python code that reads a file and handles exception</span><span class="ins">Refactor the following Python file-reading code to implement production-ready error handling. Utilize context managers (with statement) to ensure file descriptors are closed, catch specific exceptions (FileNotFoundError, PermissionError), and log warnings using standard library logging instead of print.</span>`,
+        final: "Refactor the following Python file-reading code to implement production-ready error handling. Utilize context managers (with statement) to ensure file descriptors are closed, catch specific exceptions (FileNotFoundError, PermissionError), and log warnings using standard library logging instead of print."
+      },
+      marketing: {
+        raw: "write a twitter post for my new SaaS product called Promptly",
+        diff: `<span class="del">write a twitter post for my new SaaS product called Promptly</span><span class="ins">Draft an engaging, high-conversion X/Twitter announcement post for a new SaaS product called Promptly. Emphasize the core value proposition: dynamic prompt optimization with visual word-diffs. Include a strong call-to-action link, a relevant visual description, and keep within the character limit. Use a professional, exciting tone.</span>`,
+        final: "Draft an engaging, high-conversion X/Twitter announcement post for a new SaaS product called Promptly. Emphasize the core value proposition: dynamic prompt optimization with visual word-diffs. Include a strong call-to-action link, a relevant visual description, and keep within the character limit. Use a professional, exciting tone."
+      }
+    };
+
+    let activePreset = 'email';
+    let currentOptimizedText = '';
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', () => {
+      loadPreset('email');
+    });
+
+    // Preset loader
+    function loadPreset(key) {
+      activePreset = key;
+      
+      // Toggle active states on preset buttons
+      document.querySelectorAll('.sim-preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(`preset-${key}`).classList.add('active');
+      
+      // Update text input
+      document.getElementById('prompt-input').value = presets[key].raw;
+      
+      // Reset output boxes to show empty state
+      resetOutput();
+    }
+
+    function resetOutput() {
+      const diffBox = document.getElementById('diff-content');
+      const finalBox = document.getElementById('final-content');
+      
+      diffBox.innerHTML = `
+        <div class="sim-output-empty">
+          <div class="sim-empty-icon">✦</div>
+          <div>Promptly is ready. Click "Optimize Prompt" to see the magic.</div>
+        </div>
+      `;
+      finalBox.innerHTML = `
+        <div class="sim-output-empty">
+          <div class="sim-empty-icon">✦</div>
+          <div>Optimized output will appear here.</div>
+        </div>
+      `;
+      
+      document.getElementById('sim-stats').innerText = "Status: Idle";
+      currentOptimizedText = '';
+    }
+
+    // Switch between diff tab and final tab
+    function switchTab(tabType) {
+      const tabDiff = document.getElementById('tab-diff');
+      const tabFinal = document.getElementById('tab-final');
+      const viewDiff = document.getElementById('diff-content');
+      const viewFinal = document.getElementById('final-content');
+      
+      if (tabType === 'diff') {
+        tabDiff.classList.add('active');
+        tabFinal.classList.remove('active');
+        viewDiff.style.display = 'block';
+        viewFinal.style.display = 'none';
+      } else {
+        tabFinal.classList.add('active');
+        tabDiff.classList.remove('active');
+        viewDiff.style.display = 'none';
+        viewFinal.style.display = 'block';
+      }
+    }
+
+    // Optimization triggers
+    function optimizePrompt() {
+      const userInput = document.getElementById('prompt-input').value.trim();
+      if (!userInput) return;
+      
+      const loadingScreen = document.getElementById('sim-loading-screen');
+      loadingScreen.style.display = 'flex';
+      
+      // Simulate API latency delay
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        
+        const diffBox = document.getElementById('diff-content');
+        const finalBox = document.getElementById('final-content');
+        
+        // If the user typed something custom, perform custom mock diff
+        if (presets[activePreset] && userInput === presets[activePreset].raw) {
+          diffBox.innerHTML = presets[activePreset].diff;
+          finalBox.innerHTML = `<span class="normal-txt">${presets[activePreset].final}</span>`;
+          currentOptimizedText = presets[activePreset].final;
+          document.getElementById('sim-stats').innerText = "Optimized (Gemini Pro) • 45ms";
+        } else {
+          // Custom optimization
+          const optimized = `Act as an expert prompt engineer. Refine the following draft prompt for clarity, structure, and execution parameters:\n\n[DRAFT PROMPT]\n"${userInput}"\n\nInject explicit goals, context variables, output constraints, and step-by-step reasoning steps to ensure optimal LLM responses.`;
+          
+          diffBox.innerHTML = `
+            <span class="ins">Act as an expert prompt engineer. Refine the following draft prompt for clarity, structure, and execution parameters:<br><br>[DRAFT PROMPT]<br></span>
+            <span class="normal-txt">"${userInput}"</span>
+            <span class="ins"><br><br>Inject explicit goals, context variables, output constraints, and step-by-step reasoning steps to ensure optimal LLM responses.</span>
+          `;
+          finalBox.innerHTML = `<span class="normal-txt">${optimized}</span>`;
+          currentOptimizedText = optimized;
+          document.getElementById('sim-stats').innerText = "Optimized (Gemini Pro Local) • 12ms";
+        }
+        
+      }, 700);
+    }
+
+    // Copy to clipboard
+    function copyOptimizedText() {
+      if (!currentOptimizedText) return;
+      
+      navigator.clipboard.writeText(currentOptimizedText).then(() => {
+        const copyBtn = document.getElementById('btn-copy-output');
+        const originalText = copyBtn.innerText;
+        copyBtn.innerText = "Copied!";
+        copyBtn.style.background = "#22c55e";
+        copyBtn.style.color = "white";
+        
+        setTimeout(() => {
+          copyBtn.innerText = originalText;
+          copyBtn.style.background = "";
+          copyBtn.style.color = "";
+        }, 1500);
+      });
+    }
+  </script>
+</body>
+</html>
